@@ -79,3 +79,7 @@ Thumbs.db
 build/
 out/
 x64/
+
+# third party
+/thirdparty/JoltPhysics
+/thirdparty/The-Forge
