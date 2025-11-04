@@ -39,6 +39,12 @@ git clone --recursive https://github.com/brandonchui/Engine2
 # Set Pong as startup project and build
 ```
 
+## Examples
+Includes some example games using the engine minimally.
+#### Pong
+<img width="1920" height="1080" alt="Screenshot_6297" src="https://github.com/user-attachments/assets/f83fb886-fa30-40b4-bd07-80ef9285a889" />
+
+
 ## Dependencies
 
 | Library | Purpose |
