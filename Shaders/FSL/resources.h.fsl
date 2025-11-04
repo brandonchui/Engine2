@@ -1,0 +1,18 @@
+#ifndef _RESOURCES_H_FSL
+#define _RESOURCES_H_FSL
+
+// Camera data per frame
+STRUCT(Camera)
+{
+	DATA(float4x4, projView, None);
+};
+
+// Object data per draw
+STRUCT(Object)
+{
+	DATA(float4x4, worldMat, None);
+};
+
+#include "Global.srt.h"
+
+#endif // _RESOURCES_H_FSL

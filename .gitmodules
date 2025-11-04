@@ -1,0 +1,6 @@
+[submodule "thirdparty/The-Forge"]
+	path = thirdparty/The-Forge
+	url = https://github.com/ConfettiFX/The-Forge.git
+[submodule "thirdparty/JoltPhysics"]
+	path = thirdparty/JoltPhysics
+	url = https://github.com/jrouwe/JoltPhysics

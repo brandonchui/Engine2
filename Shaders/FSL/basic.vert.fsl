@@ -1,0 +1,26 @@
+#include "Resources.h.fsl"
+
+STRUCT(VSInput)
+{
+    DATA(float3, Position, POSITION);
+    DATA(float3, Color, COLOR);
+};
+
+STRUCT(VSOutput)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float3, Color, COLOR);
+};
+
+ROOT_SIGNATURE(DefaultRootSignature)
+VSOutput VS_MAIN(VSInput In)
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    float4x4 mvp = mul(gCamera.projView, gObject.worldMat);
+    Out.Position = mul(mvp, float4(In.Position, 1.0f));
+    Out.Color = In.Color;
+
+    RETURN(Out);
+}

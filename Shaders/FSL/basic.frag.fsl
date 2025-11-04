@@ -1,0 +1,14 @@
+#include "Resources.h.fsl"
+
+STRUCT(PSInput)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float3, Color, COLOR);
+};
+
+ROOT_SIGNATURE(DefaultRootSignature)
+float4 PS_MAIN(PSInput In)
+{
+    INIT_MAIN;
+    RETURN(float4(In.Color, 1.0f));
+}
