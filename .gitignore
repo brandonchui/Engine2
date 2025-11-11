@@ -92,3 +92,4 @@ x64/
 *.txt
 docs/FSL
 docs/html
+*.json
