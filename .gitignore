@@ -83,3 +83,11 @@ x64/
 # third party
 /thirdparty/JoltPhysics
 /thirdparty/The-Forge
+
+# Images
+*.png
+
+# Doc
+*.md
+*.txt
+docs/FSL
