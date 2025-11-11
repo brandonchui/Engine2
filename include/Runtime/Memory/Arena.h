@@ -10,7 +10,7 @@
 #include "Runtime/Memory/ArenaTypes.h"
 #include "Runtime/RuntimeAPI.h"
 // For memset
-#include <cstring.h>
+#include <cstring>
 
 ///////////////////////////////////////////
 // Core API
@@ -83,14 +83,14 @@ RUNTIME_API uint64_t arenaGetPos(Arena* pArena);
 	Use when you want to save a position and want to return to it later.
 
 	@param pArena Arena to reset
-	@param pos Target position (see arenaGetPos)
+	@param targetPos Target position (see arenaGetPos)
 
 	@note All pointers allocated after this position become invalid
 
 	@see arenaGetPos
 	@see arenaPop
 */
-RUNTIME_API void arenaPopTo(Arena* pArena, uint64_t pos);
+RUNTIME_API void arenaPopTo(Arena* pArena, uint64_t targetPos);
 
 /**
 	Pops a specified number of bytes from the end of the arena.

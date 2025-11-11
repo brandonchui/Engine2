@@ -9,6 +9,12 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Header Files\Memory">
+      <UniqueIdentifier>{e39ea929-5951-431d-a253-0e9faa98b37d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Memory">
+      <UniqueIdentifier>{4a9bddd9-9fbc-4d70-8115-32e4217aaa8a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\Runtime\RuntimeAPI.h">
@@ -20,6 +26,15 @@
     <ClInclude Include="..\..\include\Runtime\ECS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\Runtime\Memory\Arena.h">
+      <Filter>Header Files\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Runtime\Memory\ArenaTypes.h">
+      <Filter>Header Files\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Runtime\Memory\PlatformMemory.h">
+      <Filter>Header Files\Memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineApp.cpp">
@@ -30,6 +45,15 @@
     </ClCompile>
     <ClCompile Include="..\..\thirdparty\The-Forge\Common_3\Game\ThirdParty\OpenSource\flecs\flecs.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory\Arena.cpp">
+      <Filter>Source Files\Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory\PlatformMemory_Darwin.cpp">
+      <Filter>Source Files\Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory\PlatformMemory_Win32.cpp">
+      <Filter>Source Files\Memory</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

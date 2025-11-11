@@ -85,7 +85,7 @@ void platformDecommitMemory(void* pMemory, uint64_t size);
 
 	@see platformReserveMemory
 */
-void platformReleaseMemory(void* pMemory, uint64_t size);
+void platformReleaseMemory(void* pMemory, uint64_t size = 0);
 
 /**
 	Returns the operating system's memory page size.
