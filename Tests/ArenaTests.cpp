@@ -28,7 +28,7 @@ TEST_CASE("Arena alignment verification", "[arena][alignment]")
 {
 	Arena* pArena = arenaCreate();
 
-	uint64_t alignments[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
+	uint64_t alignments[] = {1, 2, 4, 8, 16, 32, 64, 128};
 	for (uint64_t align : alignments)
 	{
 		void* p = arenaPush(pArena, 1, align);
@@ -43,16 +43,12 @@ TEST_CASE("Arena alignment with various sizes", "[arena][alignment]")
 {
 	Arena* pArena = arenaCreate();
 
-	struct TestCase { uint64_t size; uint64_t align; };
-	TestCase cases[] = {
-		{ 1, 16 },
-		{ 7, 8 },
-		{ 15, 32 },
-		{ 33, 64 },
-		{ 127, 128 },
-		{ 1000, 16 },
-		{ 4095, 64 }
+	struct TestCase
+	{
+		uint64_t size;
+		uint64_t align;
 	};
+	TestCase cases[] = {{1, 16}, {7, 8}, {15, 32}, {33, 64}, {127, 128}, {1000, 16}, {4095, 64}};
 
 	for (const TestCase& tc : cases)
 	{
@@ -337,7 +333,8 @@ TEST_CASE("Arena template pushStruct", "[arena][templates]")
 {
 	Arena* pArena = arenaCreate();
 
-	struct TestStruct {
+	struct TestStruct
+	{
 		int x;
 		int y;
 		float z;
@@ -409,7 +406,8 @@ TEST_CASE("Arena template with aligned struct", "[arena][templates][alignment]")
 {
 	Arena* pArena = arenaCreate();
 
-	struct alignas(64) AlignedStruct {
+	struct alignas(64) AlignedStruct
+	{
 		uint64_t data[8];
 	};
 
@@ -437,7 +435,7 @@ TEST_CASE("Arena stress test - random sizes", "[arena][stress]")
 {
 	Arena* pArena = arenaCreate();
 
-	uint64_t sizes[] = { 1, 7, 16, 33, 64, 127, 256, 511, 1024, 4095, 8192 };
+	uint64_t sizes[] = {1, 7, 16, 33, 64, 127, 256, 511, 1024, 4095, 8192};
 
 	for (int i = 0; i < 1000; i++)
 	{
