@@ -14,6 +14,16 @@
     <ClInclude Include="..\..\include\Core\CoreAPI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\Core\Handle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Core\SlotMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
-  <!-- Source files will be added here as Core grows -->
+  <ItemGroup>
+    <ClCompile Include="SlotMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

@@ -72,7 +72,7 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </ClCompile>
     <Lib>
-      <AdditionalDependencies>OS.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Runtime.lib;OS.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
@@ -94,15 +94,22 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </ClCompile>
     <Lib>
-      <AdditionalDependencies>OS.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Runtime.lib;OS.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <!-- Empty for now - will add Core source files later -->
+    <ClCompile Include="SlotMap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\Core\CoreAPI.h" />
+    <ClInclude Include="..\..\include\Core\Handle.h" />
+    <ClInclude Include="..\..\include\Core\SlotMap.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Runtime\Runtime.vcxproj">
+      <Project>{5ea259f8-c84f-421a-a12a-2f10a59744ad}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
