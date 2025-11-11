@@ -1,0 +1,13 @@
+RD_SHADER_BINARIES = CompiledShaders/
+RD_PIPELINE_CACHE = PipelineCaches/
+RD_TEXTURES = Textures/
+RD_MESHES = Meshes/
+RD_FONTS = ../../../thirdparty/The-Forge/Art/Fonts/
+RD_ANIMATIONS = Animations/
+RD_AUDIO = Audio/
+RD_SCRIPTS = Scripts/
+RD_SCREENSHOTS = Screenshots/
+RD_DEBUG = Debug/
+RD_GPU_CONFIG = ./
+RD_LOG = ./
+RD_OTHER_FILES = ./

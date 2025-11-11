@@ -17,15 +17,19 @@ EngineApp::EngineApp()
 : pRenderer(NULL)
 , pGraphicsQueue(NULL)
 , pSwapChain(NULL)
+, pDepthBuffer(NULL)
 , pImageAcquiredSemaphore(NULL)
 , pShader(NULL)
 , pPipeline(NULL)
+, pCubeShader(NULL)
+, pCubePipeline(NULL)
 , pWorld(NULL)
 , pRenderQuery(NULL)
 , pRenderDataArray(NULL)
 , maxRenderDataCount(1000)
 , gFontID(0)
 , gFrameIndex(0)
+, pDescriptorSetPersistent(NULL)
 , pDescriptorSetPerFrame(NULL)
 , pDescriptorSetPerObject(NULL)
 , nextObjectBufferIndex(0)
@@ -152,6 +156,46 @@ bool EngineApp::Load(ReloadDesc* pReloadDesc)
 	if (!pReloadDesc || pReloadDesc->mType & RELOAD_TYPE_SHADER)
 	{
 		loadShaders();
+
+		if (!pDescriptorSetPersistent)
+		{
+			DescriptorSetDesc descPersistent = SRT_SET_DESC(SrtData, Persistent, 1, 0);
+			addDescriptorSet(pRenderer, &descPersistent, &pDescriptorSetPersistent);
+			LOGF(LogLevel::eINFO, "Persistent descriptor set created (empty)");
+		}
+	}
+
+	if (!pReloadDesc || pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
+	{
+		SwapChainDesc swapChainDesc = {};
+		swapChainDesc.mWindowHandle = pWindow->handle;
+		swapChainDesc.mPresentQueueCount = 1;
+		swapChainDesc.ppPresentQueues = &pGraphicsQueue;
+		swapChainDesc.mWidth = mSettings.mWidth;
+		swapChainDesc.mHeight = mSettings.mHeight;
+		swapChainDesc.mImageCount = getRecommendedSwapchainImageCount(pRenderer, &pWindow->handle);
+		swapChainDesc.mColorFormat = getSupportedSwapchainFormat(pRenderer, &swapChainDesc,
+																 COLOR_SPACE_SDR_SRGB);
+		swapChainDesc.mColorSpace = COLOR_SPACE_SDR_SRGB;
+		swapChainDesc.mEnableVsync = mSettings.mVSyncEnabled;
+		addSwapChain(pRenderer, &swapChainDesc, &pSwapChain);
+
+		RenderTargetDesc depthRT = {};
+		depthRT.mArraySize = 1;
+		depthRT.mClearValue.depth = 0.0f;
+		depthRT.mClearValue.stencil = 0;
+		depthRT.mDepth = 1;
+		depthRT.mFormat = TinyImageFormat_D32_SFLOAT;
+		depthRT.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+		depthRT.mHeight = pSwapChain->ppRenderTargets[0]->mHeight;
+		depthRT.mWidth = pSwapChain->ppRenderTargets[0]->mWidth;
+		depthRT.mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount;
+		depthRT.mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality;
+		depthRT.mFlags = TEXTURE_CREATION_FLAG_NONE;
+		addRenderTarget(pRenderer, &depthRT, &pDepthBuffer);
+
+		LOGF(LogLevel::eINFO, "Swapchain and depth buffer recreated: %dx%d", mSettings.mWidth,
+			 mSettings.mHeight);
 	}
 
 	if (!pReloadDesc || pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
@@ -215,10 +259,32 @@ void EngineApp::Unload(ReloadDesc* pReloadDesc)
 		destroyPipeline();
 	}
 
+	if (!pReloadDesc || pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
+	{
+		if (pSwapChain)
+		{
+			removeSwapChain(pRenderer, pSwapChain);
+			pSwapChain = nullptr;
+		}
+		if (pDepthBuffer)
+		{
+			removeRenderTarget(pRenderer, pDepthBuffer);
+			pDepthBuffer = nullptr;
+		}
+		LOGF(LogLevel::eINFO, "Swapchain and depth buffer removed for resize");
+	}
+
 	if (!pReloadDesc || pReloadDesc->mType & RELOAD_TYPE_SHADER)
 	{
 		destroyPerObjectDescriptorSets();
 		destroyPerFrameUniformBuffer();
+
+		if (pDescriptorSetPersistent)
+		{
+			removeDescriptorSet(pRenderer, pDescriptorSetPersistent);
+			pDescriptorSetPersistent = nullptr;
+			LOGF(LogLevel::eINFO, "Persistent descriptor set destroyed");
+		}
 
 		unloadShaders();
 	}
@@ -269,6 +335,7 @@ void EngineApp::Draw()
 	BindRenderTargetsDesc bindRenderTargets = {};
 	bindRenderTargets.mRenderTargetCount = 1;
 	bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
+	bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
 	cmdBindRenderTargets(cmd, &bindRenderTargets);
 	cmdSetViewport(cmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight,
 				   0.0f, 1.0f);
@@ -284,20 +351,31 @@ void EngineApp::Draw()
 		const RenderContext* ctx = ecs_singleton_get(pWorld, RenderContext);
 		uint32_t drawCount = ctx ? ctx->renderDataCount : 0;
 
-		LOGF(LogLevel::eINFO, "Draw: drawCount = %d, ctx = %p", drawCount, ctx);
+		//LOGF(LogLevel::eINFO, "Draw: drawCount = %d, ctx = %p", drawCount, ctx);
 
 		if (drawCount > 0)
 		{
-			cmdBindPipeline(cmd, pPipeline);
-
-			if (pDescriptorSetPerFrame)
-			{
-				cmdBindDescriptorSet(cmd, gFrameIndex, pDescriptorSetPerFrame);
-			}
+			Pipeline* lastBoundPipeline = NULL;
 
 			for (uint32_t i = 0; i < drawCount; i++)
 			{
 				const MeshRenderData& renderData = pRenderDataArray[i];
+
+				if (renderData.pPipeline && renderData.pPipeline != lastBoundPipeline)
+				{
+					cmdBindPipeline(cmd, renderData.pPipeline);
+					lastBoundPipeline = renderData.pPipeline;
+
+					if (pDescriptorSetPersistent)
+					{
+						cmdBindDescriptorSet(cmd, 0, pDescriptorSetPersistent);
+					}
+
+					if (pDescriptorSetPerFrame)
+					{
+						cmdBindDescriptorSet(cmd, gFrameIndex, pDescriptorSetPerFrame);
+					}
+				}
 
 				if (pDescriptorSetPerObject)
 				{
@@ -403,31 +481,12 @@ bool EngineApp::initRendererInternal()
 
 	initResourceLoaderInterface(pRenderer);
 
-	SwapChainDesc swapChainDesc = {};
-	swapChainDesc.mWindowHandle = pWindow->handle;
-	swapChainDesc.mPresentQueueCount = 1;
-	swapChainDesc.ppPresentQueues = &pGraphicsQueue;
-	swapChainDesc.mWidth = mSettings.mWidth;
-	swapChainDesc.mHeight = mSettings.mHeight;
-	swapChainDesc.mImageCount = getRecommendedSwapchainImageCount(pRenderer, &pWindow->handle);
-	swapChainDesc.mColorFormat = getSupportedSwapchainFormat(pRenderer, &swapChainDesc,
-															 COLOR_SPACE_SDR_SRGB);
-	swapChainDesc.mColorSpace = COLOR_SPACE_SDR_SRGB;
-	swapChainDesc.mEnableVsync = mSettings.mVSyncEnabled;
-	addSwapChain(pRenderer, &swapChainDesc, &pSwapChain);
-
 	return true;
 }
 
 void EngineApp::exitRendererInternal()
 {
 	waitQueueIdle(pGraphicsQueue);
-
-	if (pSwapChain)
-	{
-		removeSwapChain(pRenderer, pSwapChain);
-		pSwapChain = NULL;
-	}
 
 	if (pImageAcquiredSemaphore)
 	{
@@ -457,17 +516,31 @@ void EngineApp::exitRendererInternal()
 void EngineApp::loadShaders()
 {
 	ShaderLoadDesc shaderDesc = {};
-	shaderDesc.mVert.pFileName = "test.vert";
-	shaderDesc.mFrag.pFileName = "test.frag";
+	shaderDesc.mVert.pFileName = "basic.vert";
+	shaderDesc.mFrag.pFileName = "basic.frag";
 	addShader(pRenderer, &shaderDesc, &pShader);
 
 	if (pShader)
 	{
-		LOGF(LogLevel::eINFO, "Shaders loaded successfully");
+		LOGF(LogLevel::eINFO, "Sprite shaders loaded successfully");
 	}
 	else
 	{
-		LOGF(LogLevel::eERROR, "Failed to load shaders!");
+		LOGF(LogLevel::eERROR, "Failed to load sprite shaders");
+	}
+
+	ShaderLoadDesc cubeShaderDesc = {};
+	cubeShaderDesc.mVert.pFileName = "basic.vert";
+	cubeShaderDesc.mFrag.pFileName = "cube.frag";
+	addShader(pRenderer, &cubeShaderDesc, &pCubeShader);
+
+	if (pCubeShader)
+	{
+		LOGF(LogLevel::eINFO, "Cube shaders loaded successfully");
+	}
+	else
+	{
+		LOGF(LogLevel::eERROR, "Failed to load cube shaders");
 	}
 }
 
@@ -478,15 +551,24 @@ void EngineApp::unloadShaders()
 		removeShader(pRenderer, pShader);
 		pShader = NULL;
 	}
+
+	if (pCubeShader)
+	{
+		removeShader(pRenderer, pCubeShader);
+		pCubeShader = NULL;
+	}
 }
 
 void EngineApp::createPipeline()
 {
+	LOGF(LogLevel::eINFO, "createPipeline: Starting pipeline creation");
+	LOGF(LogLevel::eINFO, "createPipeline: pShader = %p, pSwapChain = %p", pShader, pSwapChain);
+
 	VertexLayout vertexLayout = {};
 	vertexLayout.mBindingCount = 1;
 	vertexLayout.mAttribCount = 2;
 
-	vertexLayout.mBindings[0].mStride = sizeof(float) * 6; // 3 floats position + 3 floats color
+	vertexLayout.mBindings[0].mStride = sizeof(float) * 5; // 3 floats position + 2 floats UV
 	vertexLayout.mBindings[0].mRate = VERTEX_BINDING_RATE_VERTEX;
 
 	vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
@@ -495,8 +577,8 @@ void EngineApp::createPipeline()
 	vertexLayout.mAttribs[0].mLocation = 0;
 	vertexLayout.mAttribs[0].mOffset = 0;
 
-	vertexLayout.mAttribs[1].mSemantic = SEMANTIC_COLOR;
-	vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+	vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+	vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
 	vertexLayout.mAttribs[1].mBinding = 0;
 	vertexLayout.mAttribs[1].mLocation = 1;
 	vertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
@@ -504,30 +586,94 @@ void EngineApp::createPipeline()
 	RasterizerStateDesc rasterizerStateDesc = {};
 	rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
 
+	DepthStateDesc depthStateDesc = {};
+	depthStateDesc.mDepthTest = true;
+	depthStateDesc.mDepthWrite = true;
+	depthStateDesc.mDepthFunc = CMP_GEQUAL;
+	depthStateDesc.mStencilTest = false;
+	depthStateDesc.mStencilReadMask = 0xFF;
+	depthStateDesc.mStencilWriteMask = 0xFF;
+	depthStateDesc.mStencilFrontFunc = CMP_ALWAYS;
+	depthStateDesc.mStencilFrontFail = STENCIL_OP_KEEP;
+	depthStateDesc.mDepthFrontFail = STENCIL_OP_KEEP;
+	depthStateDesc.mStencilFrontPass = STENCIL_OP_KEEP;
+	depthStateDesc.mStencilBackFunc = CMP_ALWAYS;
+	depthStateDesc.mStencilBackFail = STENCIL_OP_KEEP;
+	depthStateDesc.mDepthBackFail = STENCIL_OP_KEEP;
+	depthStateDesc.mStencilBackPass = STENCIL_OP_KEEP;
+
+	BlendStateDesc blendStateDesc = {};
+	blendStateDesc.mSrcFactors[0] = BC_SRC_ALPHA;
+	blendStateDesc.mDstFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+	blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
+	blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+	blendStateDesc.mColorWriteMasks[0] = COLOR_MASK_ALL;
+	blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+	blendStateDesc.mIndependentBlend = false;
+
 	PipelineDesc pipelineDesc = {};
 	pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+
 	GraphicsPipelineDesc& pipelineSettings = pipelineDesc.mGraphicsDesc;
 	pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
 	pipelineSettings.mRenderTargetCount = 1;
+
 	pipelineSettings.pColorFormats = &pSwapChain->ppRenderTargets[0]->mFormat;
 	pipelineSettings.mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount;
 	pipelineSettings.mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality;
-	pipelineSettings.pShaderProgram = pShader;
-	pipelineSettings.pVertexLayout = &vertexLayout; // Now using vertex buffer
-	pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-	pipelineSettings.pDepthState = NULL;
-	pipelineSettings.pBlendState = NULL;
 
-	addPipeline(pRenderer, &pipelineDesc, &pPipeline);
-
-	if (pPipeline)
+	if (pDepthBuffer)
 	{
-		LOGF(LogLevel::eINFO, "Pipeline created successfully");
+		pipelineSettings.mDepthStencilFormat = pDepthBuffer->mFormat;
 	}
 	else
 	{
-		LOGF(LogLevel::eERROR, "Failed to create pipeline!");
+		pipelineSettings.mDepthStencilFormat = TinyImageFormat_D32_SFLOAT;
 	}
+
+	// Create separate depth state for sprite
+	DepthStateDesc spriteDepthStateDesc = depthStateDesc;
+	spriteDepthStateDesc.mDepthWrite = false;
+
+	pipelineSettings.pShaderProgram = pShader;
+	pipelineSettings.pVertexLayout = &vertexLayout;
+	pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+	pipelineSettings.pDepthState = &spriteDepthStateDesc;
+	pipelineSettings.pBlendState = &blendStateDesc;
+
+	addPipeline(pRenderer, &pipelineDesc, &pPipeline);
+
+	BlendStateDesc opaqueBlendStateDesc = {};
+	opaqueBlendStateDesc.mSrcFactors[0] = BC_ONE;
+	opaqueBlendStateDesc.mDstFactors[0] = BC_ZERO;
+	opaqueBlendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
+	opaqueBlendStateDesc.mDstAlphaFactors[0] = BC_ZERO;
+	opaqueBlendStateDesc.mColorWriteMasks[0] = COLOR_MASK_ALL;
+	opaqueBlendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+	opaqueBlendStateDesc.mIndependentBlend = false;
+
+	PipelineDesc cubePipelineDesc = {};
+	cubePipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+
+	GraphicsPipelineDesc& cubePipelineSettings = cubePipelineDesc.mGraphicsDesc;
+	cubePipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+	cubePipelineSettings.mRenderTargetCount = 1;
+	cubePipelineSettings.pColorFormats = &pSwapChain->ppRenderTargets[0]->mFormat;
+	cubePipelineSettings.mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount;
+	cubePipelineSettings.mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality;
+
+	if (pDepthBuffer)
+	{
+		cubePipelineSettings.mDepthStencilFormat = pDepthBuffer->mFormat;
+	}
+
+	cubePipelineSettings.pShaderProgram = pCubeShader;
+	cubePipelineSettings.pVertexLayout = &vertexLayout;
+	cubePipelineSettings.pRasterizerState = &rasterizerStateDesc;
+	cubePipelineSettings.pDepthState = &depthStateDesc;
+	cubePipelineSettings.pBlendState = &opaqueBlendStateDesc;
+
+	addPipeline(pRenderer, &cubePipelineDesc, &pCubePipeline);
 }
 
 void EngineApp::destroyPipeline()
@@ -536,6 +682,12 @@ void EngineApp::destroyPipeline()
 	{
 		removePipeline(pRenderer, pPipeline);
 		pPipeline = NULL;
+	}
+
+	if (pCubePipeline)
+	{
+		removePipeline(pRenderer, pCubePipeline);
+		pCubePipeline = NULL;
 	}
 }
 

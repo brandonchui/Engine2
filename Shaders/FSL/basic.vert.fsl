@@ -3,13 +3,13 @@
 STRUCT(VSInput)
 {
     DATA(float3, Position, POSITION);
-    DATA(float3, Color, COLOR);
+    DATA(float2, TexCoord, TEXCOORD0);
 };
 
 STRUCT(VSOutput)
 {
     DATA(float4, Position, SV_Position);
-    DATA(float3, Color, COLOR);
+    DATA(float2, TexCoord, TEXCOORD0);
 };
 
 ROOT_SIGNATURE(DefaultRootSignature)
@@ -20,7 +20,7 @@ VSOutput VS_MAIN(VSInput In)
 
     float4x4 mvp = mul(gCamera.projView, gObject.worldMat);
     Out.Position = mul(mvp, float4(In.Position, 1.0f));
-    Out.Color = In.Color;
+    Out.TexCoord = In.TexCoord;
 
     RETURN(Out);
 }

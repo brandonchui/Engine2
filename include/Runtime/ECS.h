@@ -110,6 +110,7 @@ struct MeshRenderData
 	uint32_t vertexCount;
 	uint32_t vertexStride;
 	uint32_t descriptorSetIndex;
+	Pipeline* pPipeline;
 };
 
 /**

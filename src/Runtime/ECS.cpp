@@ -35,12 +35,13 @@ void TransformSystem(ecs_iter_t* it)
 // Prepares data for GPU upload
 void FillRenderDataSystem(ecs_iter_t* it)
 {
-	LOGF(LogLevel::eINFO, "FillRenderDataSystem called: %d entities, field_count=%d", it->count,
-		 it->field_count);
+	//LOGF(LogLevel::eINFO, "FillRenderDataSystem called: %d entities, field_count=%d", it->count,
+	//	 it->field_count);
 
-	// 2 comp
+	// 3 components
 	TransformComponent* transforms = ecs_field(it, TransformComponent, 0);
 	MeshComponent* meshes = ecs_field(it, MeshComponent, 1);
+	MaterialComponent* materials = ecs_field(it, MaterialComponent, 2);
 
 	RenderContext* ctx = (RenderContext*)ecs_singleton_get(it->world, RenderContext);
 	if (!ctx || !ctx->pRenderDataArray)
@@ -64,11 +65,12 @@ void FillRenderDataSystem(ecs_iter_t* it)
 		ctx->pRenderDataArray[renderIndex].vertexCount = meshes[i].vertexCount;
 		ctx->pRenderDataArray[renderIndex].vertexStride = meshes[i].vertexStride;
 		ctx->pRenderDataArray[renderIndex].descriptorSetIndex = meshes[i].descriptorSetIndex;
+		ctx->pRenderDataArray[renderIndex].pPipeline = materials[i].pPipeline;
 		ctx->renderDataCount++;
 
-		LOGF(LogLevel::eINFO,
-			 "FillRenderDataSystem: Added entity %d (descriptor %d), total count now %d", i,
-			 meshes[i].descriptorSetIndex, ctx->renderDataCount);
+		//LOGF(LogLevel::eINFO,
+		//	 "FillRenderDataSystem: Added entity %d (descriptor %d), total count now %d", i,
+		//	 meshes[i].descriptorSetIndex, ctx->renderDataCount);
 	}
 }
 
@@ -82,7 +84,7 @@ void initECS(ecs_world_t* world)
 	ECS_COMPONENT_DEFINE(world, RenderContext);
 
 	ECS_SYSTEM(world, TransformSystem, EcsOnUpdate, TransformComponent);
-	ECS_SYSTEM(world, FillRenderDataSystem, EcsPostUpdate, TransformComponent, MeshComponent);
+	ECS_SYSTEM(world, FillRenderDataSystem, EcsPostUpdate, TransformComponent, MeshComponent, MaterialComponent);
 
 	LOGF(LogLevel::eINFO, "ECS initialized!");
 }

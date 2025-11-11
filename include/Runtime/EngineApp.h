@@ -128,10 +128,13 @@ protected:
 	GpuCmdRing gGraphicsCmdRing;
 
 	SwapChain* pSwapChain;
+	RenderTarget* pDepthBuffer;
 	Semaphore* pImageAcquiredSemaphore;
 
 	Shader* pShader;
 	Pipeline* pPipeline;
+	Shader* pCubeShader;
+	Pipeline* pCubePipeline;
 
 	ecs_world_t* pWorld;
 	ecs_query_t* pRenderQuery;
@@ -146,6 +149,8 @@ protected:
 	uint32_t gFrameIndex;
 
 	static const uint32_t gDataBufferCount = 2;
+
+	DescriptorSet* pDescriptorSetPersistent;
 
 	Buffer* pUniformBufferPerFrame[gDataBufferCount];
 	DescriptorSet* pDescriptorSetPerFrame;

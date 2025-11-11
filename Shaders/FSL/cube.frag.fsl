@@ -10,6 +10,6 @@ ROOT_SIGNATURE(DefaultRootSignature)
 float4 PS_MAIN(PSInput In)
 {
     INIT_MAIN;
-    float4 color = SampleTex2D(gSpriteTexture, gSpriteSampler, In.TexCoord);
+    float4 color = SampleTex2D(gCubeTexture, gSpriteSampler, In.TexCoord);
     RETURN(color);
 }

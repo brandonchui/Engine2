@@ -10,3 +10,7 @@
 #frag basic.frag
 #include "basic.frag.fsl"
 #end
+
+#frag cube.frag
+#include "cube.frag.fsl"
+#end
