@@ -35,6 +35,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OS", "thirdparty\The-Forge\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests", "Tests\Tests.vcxproj", "{E993BFCB-716B-4DA2-99EF-B281B3DAF219}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -65,6 +67,10 @@ Global
 		{30DD3D57-0026-48C8-BFD1-6392F319E23A}.Debug|x64.Build.0 = Debug|x64
 		{30DD3D57-0026-48C8-BFD1-6392F319E23A}.Release|x64.ActiveCfg = Release|x64
 		{30DD3D57-0026-48C8-BFD1-6392F319E23A}.Release|x64.Build.0 = Release|x64
+		{E993BFCB-716B-4DA2-99EF-B281B3DAF219}.Debug|x64.ActiveCfg = Debug|x64
+		{E993BFCB-716B-4DA2-99EF-B281B3DAF219}.Debug|x64.Build.0 = Debug|x64
+		{E993BFCB-716B-4DA2-99EF-B281B3DAF219}.Release|x64.ActiveCfg = Release|x64
+		{E993BFCB-716B-4DA2-99EF-B281B3DAF219}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
