@@ -156,6 +156,8 @@ void* slotMapGetImpl(SlotMap* pSlotMap, uint32_t handle)
 
 void slotMapRemoveImpl(SlotMap* pSlotMap, uint32_t handle)
 {
+	// To keep the array dense, we copy over the last element into the removed
+	// slot, and remove the last element. Swap and Pop.
 	if (!pSlotMap || !handleIsValid(handle))
 		return;
 

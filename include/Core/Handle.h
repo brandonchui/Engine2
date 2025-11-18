@@ -1,15 +1,13 @@
 /*
  * Handle.h
  *
- * Generational handle system for type-safe resource references.
+ * Handle wrappers for resource types.
+
+ * Handles are 32-bit integers containing:
+ *   - LSB 0-23  (24 bits): Slot index
+ *   - MSB 24-31 (8 bits):  Generation
  *
- * Handles are 32-bit opaque values containing:
- *   - Bits 0-23  (24 bits): Slot index (16,777,216 possible slots)
- *   - Bits 24-31 (8 bits):  Generation counter (256 reuses per slot)
- *
- * The generation counter provides automatic detection of use-after-free
- * errors. Each time a slot is reused, its generation increments, invalidating
- * all old handles pointing to that slot.
+ * Only 255 generations, but should be enough.
  */
 
 #ifndef _HANDLE_H_
@@ -27,35 +25,46 @@
 // Typed Handle Wrappers
 
 /**
-	Type-safe handle for texture resources.
+	Handle for texture resources.
 
-	Wraps a raw handle ID to provide compile-time type safety and prevent
-	accidentally using a texture handle as a mesh handle, etc.
+	Type safe wrapper around a 32-bit handle ID.
 
 	@see INVALID_TEXTURE_HANDLE
 */
-struct TextureHandle { uint32_t id; };
+struct TextureHandle
+{
+	uint32_t id;
+};
 
 /**
-	Type-safe handle for mesh resources.
+	Handle for mesh resources.
 
-	@see INVALID_MESH_HANDLE
+	Type safe wrapper around a 32-bit handle ID.
 */
-struct MeshHandle { uint32_t id; };
+struct MeshHandle
+{
+	uint32_t id;
+};
 
 /**
-	Type-safe handle for material resources.
+	Handle for Material resources.
 
-	@see INVALID_MATERIAL_HANDLE
+	Type safe wrapper around a 32-bit handle ID.
 */
-struct MaterialHandle { uint32_t id; };
+struct MaterialHandle
+{
+	uint32_t id;
+};
 
 /**
-	Type-safe handle for shader resources.
+	Handle for shader resources.
 
-	@see INVALID_SHADER_HANDLE
+	Type safe wrapper around a 32-bit handle ID.
 */
-struct ShaderHandle { uint32_t id; };
+struct ShaderHandle
+{
+	uint32_t id;
+};
 
 ///////////////////////////////////////////
 // Handle Manipulation Functions
@@ -63,14 +72,12 @@ struct ShaderHandle { uint32_t id; };
 /**
 	Extracts the slot index from a handle.
 
-	Returns the lower 24 bits of the handle, which represent the slot index
-	in the underlying storage (e.g., SlotMap sparse array).
+	Returns the lower 24 bits of the handle, where the index is.
 
 	@param id Handle to extract index from
 
-	@return Slot index (0 to 16,777,215)
+	@return Slot index
 
-	@note The index alone is not sufficient to validate a handle
 	@note Always check generation counter to detect stale handles
 
 	Example:
@@ -90,15 +97,11 @@ inline uint32_t handleIndex(uint32_t id)
 /**
 	Extracts the generation counter from a handle.
 
-	Returns the upper 8 bits of the handle, which represent how many times
-	the slot has been reused. Increments each time the slot is freed.
+	Returns the upper 8 bits of the handle, which represents the generation.
 
 	@param id Handle to extract generation from
 
-	@return Generation counter (0 to 255)
-
-	@note Generation wraps to 0 after 255, potentially causing ABA issues
-	@note This is acceptable in practice as 256 reuses per slot is rare
+	@return Generation counter
 
 	Example:
 	@code
@@ -117,16 +120,13 @@ inline uint32_t handleGeneration(uint32_t id)
 /**
 	Creates a handle from an index and generation counter.
 
-	Packs the 24-bit index and 8-bit generation into a single 32-bit handle.
-	This is the canonical way to construct handles.
+	Does some bit manipulation to pack the index and generation in
+	a single 32 bit integer.
 
-	@param index Slot index (0 to 16,777,215, upper bits ignored)
-	@param generation Generation counter (0 to 255, upper bits ignored)
+	@param index Slot index
+	@param generation Generation counter
 
 	@return Packed handle value
-
-	@note Values exceeding bit limits are automatically masked
-	@note Index and generation can be extracted with handleIndex/handleGeneration
 
 	Example:
 	@code
@@ -140,22 +140,22 @@ inline uint32_t handleGeneration(uint32_t id)
 */
 inline uint32_t handleMake(uint32_t index, uint32_t generation)
 {
-	return (index & HANDLE_INDEX_MASK) | ((generation & HANDLE_GENERATION_MASK) << HANDLE_INDEX_BITS);
+	return (index & HANDLE_INDEX_MASK) |
+		   ((generation & HANDLE_GENERATION_MASK) << HANDLE_INDEX_BITS);
 }
 
 /**
 	Checks if a handle has a valid format.
 
-	Tests whether the handle is not equal to the invalid sentinel value.
-	This is a fast format check only - does not validate that the handle
-	points to an existing resource.
+	Tests whether the handle is not equal to the invalid const value.
+	Just a format check, does not verify resource existence.
 
 	@param id Handle to check
 
 	@return true if handle is not HANDLE_INVALID_ID, false otherwise
 
-	@note This only checks the handle format, not resource existence
-	@note Use slotMapIsValid() to fully validate against actual storage
+	@note This only checks the handle format, not resource existence, use
+	slotMapIsValid() for that.
 
 	Example:
 	@code
@@ -180,9 +180,9 @@ inline bool handleIsValid(uint32_t id)
 // Invalid Handle Constants
 
 /**
-	Sentinel value representing an invalid texture handle.
+	Represents an invalid texture handle.
 
-	Use this constant to initialize texture handles that don't point
+	Use to initialize texture handles that don't point
 	to any resource, or to represent texture loading failures.
 
 	Example:
@@ -192,28 +192,63 @@ inline bool handleIsValid(uint32_t id)
 		tex.id = loadTexture("texture.png");
 	}
 	@endcode
+
+	@see HANDLE_INVALID_ID
 */
-static const TextureHandle INVALID_TEXTURE_HANDLE = { HANDLE_INVALID_ID };
+static const TextureHandle INVALID_TEXTURE_HANDLE = {HANDLE_INVALID_ID};
 
 /**
-	Sentinel value representing an invalid mesh handle.
+	Represents an invalid mesh handle.
 
-	@see INVALID_TEXTURE_HANDLE
+	Use this constant to initialize mesh handles that don't point
+	to any resource, or to represent mesh loading failures.
+
+	Example:
+	@code
+	MeshHandle mesh = INVALID_MESH_HANDLE;
+	if (fileExists("model.obj")) {
+		mesh.id = loadMesh("model.obj");
+	}
+	@endcode
+
+	@see HANDLE_INVALID_ID
 */
-static const MeshHandle INVALID_MESH_HANDLE = { HANDLE_INVALID_ID };
+static const MeshHandle INVALID_MESH_HANDLE = {HANDLE_INVALID_ID};
 
 /**
-	Sentinel value representing an invalid material handle.
+	Represents an invalid material handle.
 
-	@see INVALID_TEXTURE_HANDLE
+	Use this constant to initialize material handles that don't point
+	to any resource, or to represent material loading failures.
+
+	Example:
+	@code
+	MaterialHandle mat = INVALID_MATERIAL_HANDLE;
+	if (fileExists("material.mat")) {
+		mat.id = loadMaterial("material.mat");
+	}
+	@endcode
+
+	@see HANDLE_INVALID_ID
 */
-static const MaterialHandle INVALID_MATERIAL_HANDLE = { HANDLE_INVALID_ID };
+static const MaterialHandle INVALID_MATERIAL_HANDLE = {HANDLE_INVALID_ID};
 
 /**
-	Sentinel value representing an invalid shader handle.
+	Represents an invalid shader handle.
 
-	@see INVALID_TEXTURE_HANDLE
+	Use this constant to initialize shader handles that don't point
+	to any resource, or to represent shader loading failures.
+
+	Example:
+	@code
+	ShaderHandle shader = INVALID_SHADER_HANDLE;
+	if (fileExists("shader.hlsl")) {
+		shader.id = loadShader("shader.hlsl");
+	}
+	@endcode
+
+	@see HANDLE_INVALID_ID
 */
-static const ShaderHandle INVALID_SHADER_HANDLE = { HANDLE_INVALID_ID };
+static const ShaderHandle INVALID_SHADER_HANDLE = {HANDLE_INVALID_ID};
 
 #endif // _HANDLE_H_
