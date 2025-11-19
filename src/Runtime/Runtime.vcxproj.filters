@@ -35,6 +35,9 @@
     <ClInclude Include="..\..\include\Runtime\Memory\PlatformMemory.h">
       <Filter>Header Files\Memory</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\Runtime\AssetCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineApp.cpp">
@@ -54,6 +57,9 @@
     </ClCompile>
     <ClCompile Include="Memory\PlatformMemory_Win32.cpp">
       <Filter>Source Files\Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="AssetCache.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

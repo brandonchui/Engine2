@@ -387,7 +387,15 @@ void EngineApp::Draw()
 				uint32_t stride = renderData.vertexStride;
 				cmdBindVertexBuffer(cmd, 1, &vb, &stride, NULL);
 
-				cmdDraw(cmd, renderData.vertexCount, 0);
+				if (renderData.pIndexBuffer)
+				{
+					cmdBindIndexBuffer(cmd, renderData.pIndexBuffer, INDEX_TYPE_UINT16, 0);
+					cmdDrawIndexed(cmd, renderData.indexCount, 0, 0);
+				}
+				else
+				{
+					cmdDraw(cmd, renderData.vertexCount, 0);
+				}
 			}
 
 			static uint32_t lastLogFrame = 0;

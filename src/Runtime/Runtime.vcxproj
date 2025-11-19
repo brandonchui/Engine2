@@ -113,6 +113,7 @@
     </FSLShader>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AssetCache.cpp" />
     <ClCompile Include="EngineApp.cpp" />
     <ClCompile Include="ECS.cpp" />
     <ClCompile Include="..\..\thirdparty\The-Forge\Common_3\Game\ThirdParty\OpenSource\flecs\flecs.c" />
@@ -121,6 +122,7 @@
     <ClCompile Include="Memory\PlatformMemory_Win32.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\Runtime\AssetCache.h" />
     <ClInclude Include="..\..\include\Runtime\Memory\Arena.h" />
     <ClInclude Include="..\..\include\Runtime\Memory\ArenaTypes.h" />
     <ClInclude Include="..\..\include\Runtime\Memory\PlatformMemory.h" />

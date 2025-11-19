@@ -76,7 +76,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Runtime.lib;Jolt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Runtime.lib;Core.lib;Jolt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/ENTRY:mainCRTStartup /ignore:4099 /FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
@@ -126,7 +126,7 @@ if exist "$(ProjectDir)Assets\Textures\" xcopy "$(ProjectDir)Assets\Textures" "$
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Runtime.lib;Jolt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Runtime.lib;Core.lib;Jolt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/ENTRY:mainCRTStartup /ignore:4099 /FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>

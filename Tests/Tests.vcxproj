@@ -135,6 +135,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="BasicTests.cpp" />
     <ClCompile Include="ArenaTests.cpp" />
+    <ClCompile Include="HashMapTests.cpp" />
     <ClCompile Include="SlotMapTests.cpp" />
     <ClCompile Include="..\thirdparty\Catch2\extras\catch_amalgamated.cpp" />
   </ItemGroup>

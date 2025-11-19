@@ -30,14 +30,14 @@ extern ECS_COMPONENT_DECLARE(RenderContext);
 	Contains mesh metadata required to render.
 	The descriptorSetIndex maps to a per object uniform buffer slot.
 
-	@note Index buffer not implemented yet
-
 	@see
 */
 struct MeshComponent
 {
 	Buffer* pVertexBuffer;
+	Buffer* pIndexBuffer;
 	uint32_t vertexCount;
+	uint32_t indexCount;
 	uint32_t vertexStride;
 	uint32_t descriptorSetIndex;
 };
@@ -107,7 +107,9 @@ struct MeshRenderData
 {
 	mat4 modelMatrix;
 	Buffer* pVertexBuffer;
+	Buffer* pIndexBuffer;
 	uint32_t vertexCount;
+	uint32_t indexCount;
 	uint32_t vertexStride;
 	uint32_t descriptorSetIndex;
 	Pipeline* pPipeline;
@@ -178,7 +180,9 @@ void FillRenderDataSystem(ecs_iter_t* it);
 struct MeshEntityDesc
 {
 	Buffer* pVertexBuffer;
+	Buffer* pIndexBuffer;
 	uint32_t vertexCount;
+	uint32_t indexCount;
 	uint32_t vertexStride;
 	Pipeline* pPipeline;
 	vec3 position;
