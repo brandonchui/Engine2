@@ -9,8 +9,7 @@
 
 #include "Runtime/Memory/ArenaTypes.h"
 #include "Runtime/RuntimeAPI.h"
-// For memset
-#include <cstring>
+#include <string.h>
 
 ///////////////////////////////////////////
 // Core API
