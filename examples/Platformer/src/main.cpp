@@ -1,5 +1,7 @@
 #include "Runtime/EngineApp.h"
 #include "Runtime/ECS.h"
+#include "Runtime/AssetCache.h"
+#include "Runtime/Memory/Arena.h"
 #include "Utilities/Interfaces/ILog.h"
 #include "Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 
@@ -25,14 +27,17 @@ class MyGame : public EngineApp
 private:
 	vec3 heroPosition = vec3(-2.0f, 0.0f, 0.0f);
 
-	Buffer* pQuadBuffer = NULL;
-	Buffer* pCubeBuffer = NULL;
+	Arena* pAssetArena = NULL;
+	AssetCache* pAssetCache = NULL;
+	MeshHandle quadMesh = {HANDLE_INVALID_ID};
+	MeshHandle cubeMesh = {HANDLE_INVALID_ID};
+	TextureHandle spriteTexture = {HANDLE_INVALID_ID};
+	TextureHandle cubeTexture = {HANDLE_INVALID_ID};
+
 	ecs_entity_t quadEntity = 0;
 	ecs_entity_t cubeEntity = 0;
 	Camera cameraData = {};
 
-	Texture* pSpriteTexture = NULL;
-	Texture* pCubeTexture = NULL;
 	Sampler* pSpriteSampler = NULL;
 
 	JPH::TempAllocatorImpl* pTempAllocator = nullptr;
@@ -50,6 +55,17 @@ public:
 	bool Init() override
 	{
 		if (!EngineApp::Init())
+			return false;
+
+		ArenaParams arenaParams = {};
+		arenaParams.reserveSize = Megabyte(128);
+		arenaParams.commitSize = Megabyte(1);
+		pAssetArena = arenaCreate(&arenaParams);
+		if (!pAssetArena)
+			return false;
+
+		pAssetCache = createAssetCache(pAssetArena, pRenderer);
+		if (!pAssetCache)
 			return false;
 
 		JPH::RegisterDefaultAllocator();
@@ -108,34 +124,24 @@ public:
 		}
 		LOGF(LogLevel::eINFO, "Entities destroyed");
 
-		if (pQuadBuffer)
-		{
-			removeResource(pQuadBuffer);
-			pQuadBuffer = NULL;
-		}
-		if (pCubeBuffer)
-		{
-			removeResource(pCubeBuffer);
-			pCubeBuffer = NULL;
-		}
-		LOGF(LogLevel::eINFO, "Mesh buffers destroyed");
-
-		if (pSpriteTexture)
-		{
-			removeResource(pSpriteTexture);
-			pSpriteTexture = NULL;
-		}
-		if (pCubeTexture)
-		{
-			removeResource(pCubeTexture);
-			pCubeTexture = NULL;
-		}
 		if (pSpriteSampler)
 		{
 			removeSampler(pRenderer, pSpriteSampler);
 			pSpriteSampler = NULL;
 		}
-		LOGF(LogLevel::eINFO, "Texture resources destroyed");
+
+		if (pAssetCache)
+		{
+			shutdownAssetCache(pAssetCache);
+			pAssetCache = NULL;
+		}
+
+		if (pAssetArena)
+		{
+			arenaRelease(pAssetArena);
+			pAssetArena = NULL;
+		}
+		LOGF(LogLevel::eINFO, "Asset cache destroyed");
 
 		LOGF(LogLevel::eINFO, "Platformer shutting down");
 
@@ -176,160 +182,81 @@ public:
 		if (!EngineApp::Load(pReloadDesc))
 			return false;
 
-		if (!pSpriteTexture)
+		if (!handleIsValid(spriteTexture.id))
 		{
-			TextureLoadDesc textureDesc = {};
-			textureDesc.pFileName = "Sprite.tex";
-			textureDesc.ppTexture = &pSpriteTexture;
-			textureDesc.mCreationFlag = TEXTURE_CREATION_FLAG_SRGB;
-			addResource(&textureDesc, NULL);
+			spriteTexture = loadTexture(pAssetCache, "Sprite.tex");
 		}
 
-		if (!pCubeTexture)
+		if (!handleIsValid(cubeTexture.id))
 		{
-			TextureLoadDesc cubeTextureDesc = {};
-			cubeTextureDesc.pFileName = "CubeTexture.tex";
-			cubeTextureDesc.ppTexture = &pCubeTexture;
-			cubeTextureDesc.mCreationFlag = TEXTURE_CREATION_FLAG_SRGB;
-			addResource(&cubeTextureDesc, NULL);
+			cubeTexture = loadTexture(pAssetCache, "CubeTexture.tex");
 		}
 
-		if (!pSpriteTexture || !pCubeTexture)
+		if (handleIsValid(spriteTexture.id) && handleIsValid(cubeTexture.id) && pSpriteSampler)
 		{
-			waitForAllResourceLoads();
+			TextureData* pSpriteTexData = getTexture(pAssetCache, spriteTexture);
+			TextureData* pCubeTexData = getTexture(pAssetCache, cubeTexture);
 
-			if (pSpriteTexture && pCubeTexture && pSpriteSampler)
+			if (pSpriteTexData && pCubeTexData)
 			{
 				DescriptorData params[3] = {};
 				params[0].mIndex = SRT_RES_IDX(SrtData, Persistent, gSpriteTexture);
-				params[0].ppTextures = &pSpriteTexture;
+				params[0].ppTextures = &pSpriteTexData->pTexture;
 				params[1].mIndex = SRT_RES_IDX(SrtData, Persistent, gCubeTexture);
-				params[1].ppTextures = &pCubeTexture;
+				params[1].ppTextures = &pCubeTexData->pTexture;
 				params[2].mIndex = SRT_RES_IDX(SrtData, Persistent, gSpriteSampler);
 				params[2].ppSamplers = &pSpriteSampler;
 				updateDescriptorSet(pRenderer, 0, pDescriptorSetPersistent, 3, params);
 			}
 		}
 
-		if (!pCubeBuffer && pWorld)
+		if (!handleIsValid(cubeMesh.id) && pWorld)
 		{
-			struct Vertex
+			cubeMesh = createCube(pAssetCache, 2.0f);
+
+			if (handleIsValid(cubeMesh.id) && pCubePipeline)
 			{
-				float position[3];
-				float uv[2];
-			};
+				MeshData* pCubeMeshData = getMesh(pAssetCache, cubeMesh);
+				if (pCubeMeshData)
+				{
+					MeshEntityDesc cubeEntityDesc = {};
+					cubeEntityDesc.pVertexBuffer = pCubeMeshData->pVertexBuffer;
+					cubeEntityDesc.pIndexBuffer = pCubeMeshData->pIndexBuffer;
+					cubeEntityDesc.vertexCount = pCubeMeshData->vertexCount;
+					cubeEntityDesc.indexCount = pCubeMeshData->indexCount;
+					cubeEntityDesc.vertexStride = pCubeMeshData->vertexStride;
+					cubeEntityDesc.pPipeline = pCubePipeline;
+					cubeEntityDesc.position = vec3(2.0f, 0.0f, 0.0f);
+					cubeEntityDesc.rotation = vec3(0, 0, 0);
+					cubeEntityDesc.scale = vec3(1.0f, 1.0f, 1.0f);
 
-			Vertex cubeVerts[36] = {// Front face (-Z)
-									{{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f}},
-									{{-1.0f, 1.0f, -1.0f}, {0.0f, 0.0f}},
-									{{1.0f, 1.0f, -1.0f}, {1.0f, 0.0f}},
-									{{1.0f, 1.0f, -1.0f}, {1.0f, 0.0f}},
-									{{1.0f, -1.0f, -1.0f}, {1.0f, 1.0f}},
-									{{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f}},
-
-									// Back face (+Z)
-									{{1.0f, -1.0f, 1.0f}, {0.0f, 1.0f}},
-									{{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-									{{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-									{{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-									{{-1.0f, -1.0f, 1.0f}, {1.0f, 1.0f}},
-									{{1.0f, -1.0f, 1.0f}, {0.0f, 1.0f}},
-
-									// Left face (-X)
-									{{-1.0f, -1.0f, -1.0f}, {1.0f, 1.0f}},
-									{{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f}},
-									{{-1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-									{{-1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-									{{-1.0f, -1.0f, 1.0f}, {0.0f, 1.0f}},
-									{{-1.0f, -1.0f, -1.0f}, {1.0f, 1.0f}},
-
-									// Right face (+X)
-									{{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f}},
-									{{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-									{{1.0f, 1.0f, -1.0f}, {0.0f, 0.0f}},
-									{{1.0f, 1.0f, -1.0f}, {0.0f, 0.0f}},
-									{{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f}},
-									{{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f}},
-
-									// Bottom face (-Y)
-									{{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}},
-									{{1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
-									{{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f}},
-									{{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f}},
-									{{-1.0f, -1.0f, 1.0f}, {0.0f, 1.0f}},
-									{{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}},
-
-									// Top face (+Y)
-									{{-1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-									{{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-									{{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f}},
-									{{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f}},
-									{{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f}},
-									{{-1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}};
-
-			pCubeBuffer = createMeshBuffer(cubeVerts, sizeof(cubeVerts));
-
-			if (pCubeBuffer && pCubePipeline)
-			{
-				const uint32_t cubeVertexCount = 36;
-				const uint32_t vertexStride = sizeof(Vertex);
-
-				float windowWidth = (float)pSwapChain->ppRenderTargets[0]->mWidth;
-				float windowHeight = (float)pSwapChain->ppRenderTargets[0]->mHeight;
-
-				MeshEntityDesc cubeEntityDesc = {};
-				cubeEntityDesc.pVertexBuffer = pCubeBuffer;
-				cubeEntityDesc.vertexCount = cubeVertexCount;
-				cubeEntityDesc.vertexStride = vertexStride;
-				cubeEntityDesc.pPipeline = pCubePipeline;
-				cubeEntityDesc.position = vec3(2.0f, 0.0f, 0.0f);
-				cubeEntityDesc.rotation = vec3(0, 0, 0);
-				cubeEntityDesc.scale = vec3(1.0f, 1.0f, 1.0f);
-
-				cubeEntity = createMeshEntity(&cubeEntityDesc);
+					cubeEntity = createMeshEntity(&cubeEntityDesc);
+				}
 			}
 		}
 
-		if (!pQuadBuffer && pWorld)
+		if (!handleIsValid(quadMesh.id) && pWorld)
 		{
-			struct Vertex
+			quadMesh = createQuad(pAssetCache, 2.0f, 2.0f);
+
+			if (handleIsValid(quadMesh.id) && pPipeline)
 			{
-				float position[3];
-				float uv[2];
-			};
+				MeshData* pQuadMeshData = getMesh(pAssetCache, quadMesh);
+				if (pQuadMeshData)
+				{
+					MeshEntityDesc entityDesc = {};
+					entityDesc.pVertexBuffer = pQuadMeshData->pVertexBuffer;
+					entityDesc.pIndexBuffer = pQuadMeshData->pIndexBuffer;
+					entityDesc.vertexCount = pQuadMeshData->vertexCount;
+					entityDesc.indexCount = pQuadMeshData->indexCount;
+					entityDesc.vertexStride = pQuadMeshData->vertexStride;
+					entityDesc.pPipeline = pPipeline;
+					entityDesc.position = vec3(-2.0f, 0.0f, 0.0f);
+					entityDesc.rotation = vec3(0, 0, 0);
+					entityDesc.scale = vec3(1.0f, 1.0f, 1.0f);
 
-			Vertex quadVerts[] = {
-				// Triangle 1
-				{{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
-				{{1.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
-				{{-1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-				// Triangle 2
-				{{-1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-				{{1.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
-				{{1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-			};
-
-			pQuadBuffer = createMeshBuffer(quadVerts, sizeof(quadVerts));
-
-			if (pQuadBuffer && pPipeline)
-			{
-				const uint32_t quadVertexCount = 6;
-				const uint32_t vertexStride = sizeof(Vertex);
-
-				float windowWidth = (float)pSwapChain->ppRenderTargets[0]->mWidth;
-				float windowHeight = (float)pSwapChain->ppRenderTargets[0]->mHeight;
-				float quadSize = 500.0f;
-
-				MeshEntityDesc entityDesc = {};
-				entityDesc.pVertexBuffer = pQuadBuffer;
-				entityDesc.vertexCount = quadVertexCount;
-				entityDesc.vertexStride = vertexStride;
-				entityDesc.pPipeline = pPipeline;
-				entityDesc.position = vec3(-2.0f, 0.0f, 0.0f);
-				entityDesc.rotation = vec3(0, 0, 0);
-				entityDesc.scale = vec3(1.0f, 1.0f, 1.0f);
-
-				quadEntity = createMeshEntity(&entityDesc);
+					quadEntity = createMeshEntity(&entityDesc);
+				}
 			}
 		}
 		LOGF(LogLevel::eINFO, "Platformer assets loaded");
