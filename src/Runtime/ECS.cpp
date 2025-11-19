@@ -62,7 +62,9 @@ void FillRenderDataSystem(ecs_iter_t* it)
 
 		ctx->pRenderDataArray[renderIndex].modelMatrix = transforms[i].worldMatrix;
 		ctx->pRenderDataArray[renderIndex].pVertexBuffer = meshes[i].pVertexBuffer;
+		ctx->pRenderDataArray[renderIndex].pIndexBuffer = meshes[i].pIndexBuffer;
 		ctx->pRenderDataArray[renderIndex].vertexCount = meshes[i].vertexCount;
+		ctx->pRenderDataArray[renderIndex].indexCount = meshes[i].indexCount;
 		ctx->pRenderDataArray[renderIndex].vertexStride = meshes[i].vertexStride;
 		ctx->pRenderDataArray[renderIndex].descriptorSetIndex = meshes[i].descriptorSetIndex;
 		ctx->pRenderDataArray[renderIndex].pPipeline = materials[i].pPipeline;
@@ -95,7 +97,9 @@ ecs_entity_t createMeshEntity(ecs_world_t* world, const MeshEntityDesc* pDesc)
 
 	MeshComponent mesh = {};
 	mesh.pVertexBuffer = pDesc->pVertexBuffer;
+	mesh.pIndexBuffer = pDesc->pIndexBuffer;
 	mesh.vertexCount = pDesc->vertexCount;
+	mesh.indexCount = pDesc->indexCount;
 	mesh.vertexStride = pDesc->vertexStride;
 	ecs_set(world, entity, MeshComponent, mesh);
 
