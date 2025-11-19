@@ -20,9 +20,15 @@
     <ClInclude Include="..\..\include\Core\SlotMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\Core\HashMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SlotMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HashMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

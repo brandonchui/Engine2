@@ -99,11 +99,13 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="HashMap.cpp" />
     <ClCompile Include="SlotMap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\Core\CoreAPI.h" />
     <ClInclude Include="..\..\include\Core\Handle.h" />
+    <ClInclude Include="..\..\include\Core\HashMap.h" />
     <ClInclude Include="..\..\include\Core\SlotMap.h" />
   </ItemGroup>
   <ItemGroup>
